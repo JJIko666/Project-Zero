@@ -24,14 +24,15 @@ const NR=GD.map(a=>({id:a[0],en:a[1],ru:a[2],l:a[3],eq:a[4],pn:a[5],pe:a[6],an:a
 const NRID=Object.fromEntries(NR.map(r=>[r.ru,r.id]));
 const lr=ru=>R.find(x=>x.n==ru);
 const nameEn=r=>r.en||EN[r.n]||r.n;
-const UD=()=>`<span class="red" role="img" aria-label="${B('Не определено','Undefined')}">████████ <small>${B('не определено','undefined')}</small></span>`;
+const UD=()=>`<span class="missing-field"><strong>${B('НУЖНА ИНФОРМАЦИЯ ДЛЯ ЗАПОЛНЕНИЯ','INFORMATION NEEDED')}</strong></span>`;
 const CHG=r=>B(r[0],r[1]);
 const fv=f=>f[1]==null?UD():f[1];
 /* state */
 let cmpSel=[];
 function cmpHtml(){if(cmpSel.length<2)return `<p class="mut">${B('Отметьте «Сравнить» у 2–3 ролей GOOD. Сравниваются только существующие поля, рейтинг силы не строится.','Tick “Compare” on 2–3 GOOD roles. Only existing fields are compared; no power ranking is built.')}</p>`;
  const rs=cmpSel.map(i=>NR.find(r=>r.id==i)),fs=rs.map(F17);
- return `<table><tr><th>#</th><th>${B('Поле','Field')}</th>${rs.map(r=>`<th>${r.en}</th>`).join('')}</tr>${fs[0].map((f,i)=>`<tr><td>${i+1}</td><td><b>${B(f[0][0],f[0][1])}</b></td>${fs.map(x=>`<td style="white-space:normal;min-width:180px">${fv(x[i])}</td>`).join('')}</tr>`).join('')}</table><button data-cc>${B('Сбросить сравнение','Clear comparison')}</button>`}
+ const rows=fs[0].map((f,i)=>({f,i})).filter(({i})=>fs.some(x=>x[i][1]!=null||x[i][3]));
+ return `<table><tr><th>${B('Поле','Field')}</th>${rs.map(r=>`<th>${r.en}</th>`).join('')}</tr>${rows.map(({f,i})=>`<tr><td><b>${B(f[0][0],f[0][1])}</b></td>${fs.map(x=>`<td style="white-space:normal;min-width:180px">${fv(x[i])}</td>`).join('')}</tr>`).join('')}</table><button data-cc>${B('Сбросить сравнение','Clear comparison')}</button>`}
 /* interactions (delegated) */
 function rfilter(){const root=document.getElementById('rdb');if(!root)return;const q=document.getElementById('rq').value.trim().toLowerCase(),l=document.getElementById('rl').value,t=root.dataset.t;let n=0;
  root.querySelectorAll('.rc').forEach(c=>{const ok=(t=='all'||c.dataset.t==t)&&(l=='all'||c.dataset.l==l)&&(!q||c.dataset.n.includes(q));c.hidden=!ok;if(ok)n++});
