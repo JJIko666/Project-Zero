@@ -27,46 +27,56 @@ mk('overlord','Overlord','Повелитель','m',4,{stt:'wip',df:['Expert','E
 mk('reaper','Reaper','Жнец','m',3,{stt:'wip',df:['Expert','Expert'],eq:['Сканер судьбы','Fate Scanner'],pn:'END SIGNAL',an:'FINAL JUDGMENT',sn:'LAST HOUR',ch:C2,cd:CD2,rs:['не устраняет игроков, не меняет жизни, не завершает матч, не определяет победителя','cannot eliminate players, change lives, end the match, or determine the winner'],nt:['Изменённая версия, в разработке. Предложенные эффекты (по порядку): предупреждение о приближении финального цикла; выбор показателя для специального отчёта; дополнительное условие следующего цикла.','Changed version, work in progress. Proposed effects (in order): warning of the approaching final cycle; choosing a metric for a special report; an extra condition for the next cycle.']})];
 NR.push(...X);X.forEach(r=>NRID[r.ru]=r.id);
 const TN={g:['GOOD — Хорошие','GOOD — Good'],e:['EVIL — Злодеи','EVIL — Evil'],i:['INDEPENDENT — Независимые','INDEPENDENT — Independent'],m:['MIGHTY — Могучие','MIGHTY — Mighty']};
-const NOTE0=['Версия — предложение, не утверждённый канон. Действует общий лимит: одна активная способность за цикл (правила 2.0). Judge проверяет применение по правилам режима.','This version is a proposal, not confirmed canon. The general limit applies: one active ability per cycle (Rules 2.0). The Judge validates use under the mode’s rules.'];
-function F17(r){const v=a=>a?B(a[0],a[1]):null,ab=(n,e)=>n?`<b>${n}</b> — ${e?v(e):UD()}`:null,T=r.t;
+const roleConflict=(r,re)=>(r.cf||[]).some(c=>re.test(c.join(' ')));
+const missingField=name=>`<span class="missing-field">${B('Нужно указать: ','Needs information: ')}${name}</span>`;
+const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function F17(r){const v=a=>a?B(a[0],a[1]):null,ab=(n,e)=>n?`<b>${n}</b> — ${e?v(e):missingField(B('описание способности','ability description'))}`:null,T=r.t;
  const goal=r.goal||(T=='g'?['Выполнить минимум 4 из 5 главных миссий, пока остаётся хотя бы один активный GOOD','Complete at least 4 of 5 main missions while at least one GOOD stays active']:T=='e'?EVG:null);
  const ex=r.ex||(T=='i'?INX:null);
  const sp=r.sno?B('Отсутствует','None'):(r.sn?ab(r.sn,r.se):null);
  const ch=Array.isArray(r.ch)?v(r.ch):(r.ch==null?null:String(r.ch));
+ const lifeConflict=!!r.la||roleConflict(r,/жизн|life/i),difficultyConflict=!!r.dfc||roleConflict(r,/сложност|difficult/i),abilityConflict=roleConflict(r,/способност|ability/i);
+ const lifeValue=lifeConflict?missingField(B('количество жизней','life count')):String(r.l);
+ const difficultyValue=difficultyConflict?missingField(B('сложность персонажа','character difficulty')):v(r.df);
+ const activeValue=abilityConflict?missingField(B('активная способность','active ability')):ab(r.an,r.ae);
+ const passiveValue=abilityConflict?missingField(B('пассивная способность','passive ability')):ab(r.pn,r.pe);
+ const activePresent=!!r.an&&!abilityConflict;
+ const conflicted=(name,re,value)=>roleConflict(r,re)?missingField(name):value;
+ const noteText=Array.isArray(r.nt)?r.nt.join(' '):'';
+ const note=r.nt&&!/(предлож|верси|не определ|не установлен|не соглас|not defined|not set|proposal|version)/i.test(noteText)?v(r.nt):null;
  return[
-[['Имя','Name'],`${r.en} · ${r.ru}`,'ok'],
-[['Команда','Team'],v(TN[T]),'ok'],
-[['Сложность','Difficulty'],v(r.df),r.df?(r.dfc?'cf':'ch'):'un'],
-[['Жизни','Lives'],String(r.l)+(r.la?` · ${B('ранее предлагалось: ','earlier proposed: ')}${r.la}`:''),r.la?'cf':'ch'],
-[['Оружие / инструмент','Weapon / tool'],v(r.eq),r.eq?'ch':'un'],
-[['Пассивная способность','Passive ability'],ab(r.pn,r.pe),r.pn?'ch':'un'],
-[['Активная способность','Active ability'],ab(r.an,r.ae),r.an?'ch':'un'],
-[['Особая способность','Special ability'],sp,sp?'ch':'un'],
-[['Заряды','Charges'],ch,ch?'ch':'un'],
-[['Перезарядка','Cooldown'],v(r.cd),r.cd?'ch':'un'],
-[['Цель способности','Ability target'],v(r.tg),r.tg?'ch':'un'],
-[['Ограничения','Restrictions'],v(r.rs),r.rs?'ch':'un'],
-[['Контрмеры','Counterplay'],v(r.ct),r.ct?'ch':'un'],
-[['Главная цель','Main goal'],v(goal),goal?'ok':'un'],
-[['Дополнительное условие','Additional condition'],v(ex),ex?'ok':'un'],
-[['Стратегия','Strategy'],null,'un'],
-[['Примечания ZERO CORE / Judge','ZERO CORE / Judge notes'],B(NOTE0[0],NOTE0[1])+(r.nt?'<br>'+v(r.nt):''),'ch']]}
-const hay=r=>(r.en+' '+r.ru+' '+(r.pn||'')+' '+(r.an||'')+' '+(r.sn||'')).toLowerCase();
-const cardX=(r,hid)=>`<div class="card ${r.t} rc"${hid?' hidden':''} data-t="${r.t}" data-l="${r.l}" data-n="${hay(r)}"><h3>${r.en} <span class="mut">${r.ru}</span></h3><span class="tag">${TN[r.t][0].split(' ')[0]}</span><span class="tag">♥ ${r.l}</span>${r.df?`<span class="tag">${r.df[0]}</span>`:''}${st(r.stt||'ch')}<p class="mut">${[r.pn,r.an,r.sn].filter(Boolean).join(' · ')||B('способности не определены','abilities undefined')}</p><div class="rcb"><a class="btn" href="#role:${r.id}">${B('Профиль','Profile')}</a><label class="cmp"><input type="checkbox" data-cmp="${r.id}"${cmpSel.includes(r.id)?' checked':''}> ${B('Сравнить','Compare')}</label></div></div>`;
-P2.roles=a=>{const ps=a.split(':'),t0=['all','g','e','i','m'].includes(ps[0])?ps[0]:'all',f=ps.find(x=>x.startsWith('f=')),q0=f?decodeURIComponent(f.slice(2)):'',ql=q0.toLowerCase(),cnt={all:NR.length,g:20,e:8,i:8,m:5};
- return `<h2>${B('База персонажей','Character Database')}</h2>${st('ch')}
-<p>${B('41 роль: GOOD — 20, EVIL — 8, INDEPENDENT — 8, MIGHTY — 5. Все карточки в формате 17 полей: значения — изменённые версии (предложения); рядом версия «Правила 2.0». Неизвестное закрашено, конфликты данных показаны, а не склеены.','41 roles: GOOD — 20, EVIL — 8, INDEPENDENT — 8, MIGHTY — 5. Every card uses the 17-field format: values are changed versions (proposals), with the “Rules 2.0” version alongside. Unknown data is redacted and data conflicts are shown, not merged.')}</p>
-<div id="rdb" data-t="${t0}"><div class="rtools"><input id="rq" type="search" value="${q0.replace(/"/g,'')}" placeholder="${B('Поиск по роли или способности…','Search a role or ability…')}" aria-label="${B('Поиск','Search')}"><select id="rl" aria-label="${B('Жизни','Lives')}"><option value="all">${B('Любые жизни','Any lives')}</option><option value="2">♥ 2</option><option value="3">♥ 3</option><option value="4">♥ 4</option></select><span class="mut mono" id="rcnt" aria-live="polite"></span></div>
+ [['Имя','Name'],`${r.en} · ${r.ru}`,'ok',false],
+ [['Команда','Team'],v(TN[T]),'ok',false],
+ [['Сложность','Difficulty'],difficultyValue||missingField(B('сложность персонажа','character difficulty')),'un',true],
+ [['Жизни','Lives'],lifeValue,'ch',true],
+ [['Оружие / инструмент','Weapon / tool'],conflicted(B('инструмент персонажа','character tool'),/инструмент|оруж|tool|weapon/i,v(r.eq)),'ch',false],
+ [['Пассивная способность','Passive ability'],passiveValue||missingField(B('пассивная способность','passive ability')),'un',true],
+ [['Активная способность','Active ability'],activeValue||missingField(B('активная способность','active ability')),'un',true],
+ [['Особая способность','Special ability'],abilityConflict?missingField(B('особую способность','special ability')):sp,'un',false],
+ [['Заряды','Charges'],conflicted(B('число зарядов активной способности','active ability charges'),/заряд|charge/i,ch||(activePresent?missingField(B('число зарядов активной способности','active ability charges')):null)),'un',!!activePresent],
+ [['Перезарядка','Cooldown'],conflicted(B('перезарядку способности','ability cooldown'),/перезаряд|cooldown/i,v(r.cd)),'un',false],
+ [['Цель способности','Ability target'],conflicted(B('цель способности','ability target'),/цель способности|ability target/i,v(r.tg)),'un',false],
+ [['Ограничения','Restrictions'],conflicted(B('ограничения способности','ability restrictions'),/ограничен|restriction/i,v(r.rs)),'un',false],
+ [['Контрмеры','Counterplay'],conflicted(B('контрмеры','counterplay'),/контрмер|counterplay/i,v(r.ct)),'un',false],
+ [['Главная цель','Main goal'],conflicted(B('главную цель','main goal'),/главн.*цел|main goal/i,v(goal)||missingField(B('главная цель','main goal'))),'un',true],
+ [['Дополнительное условие','Additional condition'],conflicted(B('дополнительное условие','additional condition'),/дополнительн.*услов|additional condition/i,v(ex)),'un',false],
+ [['Стратегия','Strategy'],conflicted(B('стратегию','strategy'),/стратег|strategy/i,v(r.strategy)),'un',false],
+ [['Примечания ZERO CORE / Judge','ZERO CORE / Judge notes'],note,'un',false]
+ ].map((f,i)=>[...f,i+1])}
+const hay=r=>JSON.stringify(r).toLowerCase();
+const cardX=(r,hid)=>{const lifeConflict=!!r.la||roleConflict(r,/жизн|life/i),difficultyConflict=!!r.dfc||roleConflict(r,/сложност|difficult/i),abilityConflict=roleConflict(r,/способност|ability/i),abilities=abilityConflict?B('Способности требуют уточнения','Abilities need clarification'):[r.pn,r.an,r.sn].filter(Boolean).join(' · ')||B('Способности требуют уточнения','Abilities need clarification');return `<div class="card ${r.t} rc"${hid?' hidden':''} data-t="${r.t}" data-l="${lifeConflict?'unknown':r.l}" data-n="${escapeHTML(hay(r))}"><h3>${r.en} <span class="mut">${r.ru}</span></h3><span class="tag">${TN[r.t][0].split(' ')[0]}</span>${lifeConflict?`<span class="tag">${B('Жизни требуют уточнения','Lives need clarification')}</span>`:`<span class="tag">♥ ${r.l}</span>`}${r.df&&!difficultyConflict?`<span class="tag">${r.df[0]}</span>`:''}<p class="mut">${abilities}</p><div class="rcb"><a class="btn" href="#role:${r.id}">${B('Профиль','Profile')}</a><label class="cmp"><input type="checkbox" data-cmp="${r.id}"${cmpSel.includes(r.id)?' checked':''}> ${B('Сравнить','Compare')}</label></div></div>`};
+P2.roles=a=>{const ps=a.split(':'),t0=['all','g','e','i','m'].includes(ps[0])?ps[0]:'all',f=ps.find(x=>x.startsWith('f='));let q0='';if(f){try{q0=decodeURIComponent(f.slice(2))}catch(e){q0=f.slice(2)}}const ql=q0.toLowerCase(),cnt={all:NR.length,g:20,e:8,i:8,m:5};
+ return `<h2>${B('База персонажей','Character Database')}</h2>
+<p>${B('Каталог из 41 персонажа. Фильтруйте по команде, находите роли по их описаниям и сравнивайте выбранные профили. Необязательные пустые поля не показываются.','Browse 41 characters. Filter by team, search role details and compare selected profiles. Empty optional fields are hidden.')}</p>
+<div id="rdb" data-t="${t0}"><div class="rtools"><input id="rq" type="search" value="${escapeHTML(q0)}" placeholder="${B('Поиск по роли, способности и описанию…','Search roles, abilities and details…')}" aria-label="${B('Поиск','Search')}"><select id="rl" aria-label="${B('Жизни','Lives')}"><option value="all">${B('Любые жизни','Any lives')}</option><option value="2">♥ 2</option><option value="3">♥ 3</option><option value="4">♥ 4</option></select><span class="mut mono" id="rcnt" aria-live="polite"></span></div>
 <div class="chips" role="group">${[['all','ALL'],['g','GOOD'],['e','EVIL'],['i','INDEPENDENT'],['m','MIGHTY']].map(c=>`<button data-rt="${c[0]}" class="${c[0]==t0?'on':''}" aria-pressed="${c[0]==t0}">${c[1]} (${cnt[c[0]]})</button>`).join('')}</div>
 <div class="grid">${NR.map(r=>cardX(r,!((t0=='all'||t0==r.t)&&(!ql||hay(r).includes(ql))))).join('')}</div><p class="mut" id="rno" hidden>${B('Нет ролей по этим условиям.','No roles match these filters.')}</p></div>
 <h3>${B('Сравнение ролей','Compare roles')}</h3><div id="cmp">${cmpHtml()}</div>`};
 P2.role=id=>{const r=NR.find(x=>x.id==id);if(!r)return `<h2>${B('Роль не найдена','Role not found')}</h2><a class="btn" href="#roles:all">${B('К базе персонажей','Back to the database')}</a>`;
- const i=NR.indexOf(r),pv=NR[i-1],nx=NR[i+1],o=lr(r.ru),k=NR.filter(x=>x.t==r.t).indexOf(r)+1,cf=o&&o.l&&String(o.l)!=String(r.l),tg=TN[r.t][0].split(' ')[0];
- return `<div class="dos"><span class="mono">FILE PZ-CHR-${tg[0]}${String(k).padStart(2,'0')} · ${B('ДОСТУП: ОТКРЫТЫЙ','CLEARANCE: PUBLIC')}</span>${st(r.stt||'ch')}</div><h2>${r.en} <span class="mut">${r.ru}</span></h2>
-<p><span class="tag">${tg}</span><span class="tag">♥ ${r.l}</span>${r.df?`<span class="tag">${r.df[0]}</span>`:''}</p>
+ const i=NR.indexOf(r),pv=NR[i-1],nx=NR[i+1],tg=TN[r.t][0].split(' ')[0],fields=F17(r).filter(f=>f[1]!=null||f[3]),missing=fields.filter(f=>f[3]&&String(f[1]).includes('missing-field')).map(f=>B(f[0][0],f[0][1]));
+ return `<h2>${r.en} <span class="mut">${r.ru}</span></h2>
+<p><span class="tag">${tg}</span>${!!r.la||roleConflict(r,/жизн|life/i)?`<span class="tag">${B('Жизни требуют уточнения','Lives need clarification')}</span>`:`<span class="tag">♥ ${r.l}</span>`}</p>
 <div class="rcb">${pv?`<a class="btn" href="#role:${pv.id}">← ${pv.en}</a>`:''}<a class="btn" href="#roles:${r.t}">${B('Все '+tg,'All '+tg)}</a>${nx?`<a class="btn" href="#role:${nx.id}">${nx.en} →</a>`:''}</div>
-<h3>${B('Карточка · 17 полей','Card · 17 fields')}</h3>${F17(r).map((f,n)=>`<div class="fld"><span class="n">${String(n+1).padStart(2,'0')}</span><span class="k">${B(f[0][0],f[0][1])}</span><span class="v">${fv(f)}</span><span class="s">${st(f[2])}</span></div>`).join('')}
-<h3>${B('Версии','Versions')}</h3><div class="grid"><div class="card ${r.t}"><h3>${B('Изменённая версия (эта карточка)','Changed version (this card)')}</h3>${st(r.stt||'ch')}<p>♥ ${r.l} · ${[r.pn,r.an,r.sn].filter(Boolean).join(' · ')}</p></div>
-<div class="card"><h3>${B('Правила 2.0','Rules 2.0')}</h3>${o&&o.p?`${st('ok')}<p>♥ ${o.l}</p><p><b>${B('Пассивная','Passive')}:</b> ${r20(o,'p')}</p><p><b>${B('Активная','Active')}:</b> ${r20(o,'a')}</p>${o.g?`<p>${r20(o,'g')}</p>`:''}`:`${st('wip')}<p>${o&&o.g?r20(o,'g'):B('В правилах 2.0 карточки способностей нет.','Rules 2.0 has no ability card.')}</p>`}<p class="mut">${B('Оригинальный текст правил 2.0.','Rules 2.0 text; the English version is a translation.')}</p></div></div>
-${cf?`<div class="note">${st('cf')} ${B('Жизни различаются: правила 2.0 — '+o.l+', изменённая версия — '+r.l+'. Версии не объединены.','Lives differ: Rules 2.0 — '+o.l+', changed version — '+r.l+'. The versions are not merged.')}</div>`:''}
-${(r.cf||[]).map(c=>`<div class="note">${st('cf')} ${B(c[0],c[1])}</div>`).join('')}${(r.ar||[]).map(c=>`<div class="note">${st('ar')} ${B(c[0],c[1])}</div>`).join('')}`};
+${missing.length?`<aside class="info-required" role="note"><strong>${B('НУЖНА ИНФОРМАЦИЯ ДЛЯ ЗАПОЛНЕНИЯ','INFORMATION NEEDED')}</strong><p>${B('Не указано: ','Missing: ')}${missing.join(', ')}.</p></aside>`:''}
+<h3>${B('Карточка персонажа','Character profile')}</h3>${fields.map(f=>`<div class="fld"><span class="n">${String(f[4]).padStart(2,'0')}</span><span class="k">${B(f[0][0],f[0][1])}</span><span class="v">${fv(f)}</span></div>`).join('')}
+<div class="rcb">${pv?`<a class="btn" href="#role:${pv.id}">← ${pv.en}</a>`:''}<a class="btn" href="#roles:${r.t}">${B('К персонажам','Back to characters')}</a>${nx?`<a class="btn" href="#role:${nx.id}">${nx.en} →</a>`:''}</div>`};
